@@ -10,6 +10,7 @@ import os
 import argparse
 import copy
 import time
+from unicodedata import digit
 import rospy
 import rospkg
 import numpy as np
@@ -22,20 +23,20 @@ from lab2_header import *
 SPIN_RATE = 20
 
 # UR3 home location
-home = np.radians([120, -90, 90, -90, -90, 0])
+home = np.radians([180, -90, 90, -90, -90, 90])
 
 # Hanoi tower location 1
-Q11 = [120*pi/180.0, -56*pi/180.0, 124*pi/180.0, -158*pi/180.0, -90*pi/180.0, 0*pi/180.0]
-Q12 = [120*pi/180.0, -64*pi/180.0, 123*pi/180.0, -148*pi/180.0, -90*pi/180.0, 0*pi/180.0]
-Q13 = [120*pi/180.0, -72*pi/180.0, 120*pi/180.0, -137*pi/180.0, -90*pi/180.0, 0*pi/180.0]
+Q11 = [142.16*pi/180.0, -64.32*pi/180.0, 145.59*pi/180.0, -170.32*pi/180.0, -90*pi/180.0, 53.26*pi/180.0]
+Q12 = [142.21*pi/180.0, -77.5*pi/180.0, 143.96*pi/180.0, -155.52*pi/180.0, -90*pi/180.0, 53.18*pi/180.0]
+Q13 = [142.27*pi/180.0, -88.17*pi/180.0, 140.60*pi/180.0, -141.49*pi/180.0, -90*pi/180.0, 53.09*pi/180.0]
 # Hanoi tower location 2
-Q21 = [120*pi/180.0, -56*pi/180.0, 124*pi/180.0, -158*pi/180.0, -90*pi/180.0, 0*pi/180.0]
-Q22 = [120*pi/180.0, -64*pi/180.0, 123*pi/180.0, -148*pi/180.0, -90*pi/180.0, 0*pi/180.0]
-Q23 = [120*pi/180.0, -72*pi/180.0, 120*pi/180.0, -137*pi/180.0, -90*pi/180.0, 0*pi/180.0]
+Q21 = [171.89*pi/180.0, -64.72*pi/180.0, 142.41*pi/180.0, -166.32*pi/180.0, -90*pi/180.0, 82.95*pi/180.0]
+Q22 = [171.93*pi/180.0, -76.24*pi/180.0, 140.83*pi/180.0, -153.21*pi/180.0, -90*pi/180.0, 82.87*pi/180.0]
+Q23 = [171.98*pi/180.0, -86.14*pi/180.0, 137.57*pi/180.0, -140.05*pi/180.0, -90*pi/180.0, 82.79*pi/180.0]
 # Hanoi tower location 3
-Q31 = [120*pi/180.0, -56*pi/180.0, 124*pi/180.0, -158*pi/180.0, -90*pi/180.0, 0*pi/180.0]
-Q32 = [120*pi/180.0, -64*pi/180.0, 123*pi/180.0, -148*pi/180.0, -90*pi/180.0, 0*pi/180.0]
-Q33 = [120*pi/180.0, -72*pi/180.0, 120*pi/180.0, -137*pi/180.0, -90*pi/180.0, 0*pi/180.0]
+Q31 = [198.96*pi/180.0, -57.81*pi/180.0, 122.85*pi/180.0, -153.57*pi/180.0, -90*pi/180.0, 109.91*pi/180.0]
+Q32 = [198.98*pi/180.0, -65.59*pi/180.0, 121.66*pi/180.0, -144.60*pi/180.0, -90*pi/180.0, 109.84*pi/180.0]
+Q33 = [199.01*pi/180.0, -72.54*pi/180.0, 119.15*pi/180.0, -135.13*pi/180.0, -90*pi/180.0, 109.76*pi/180.0]
 
 thetas = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
@@ -198,21 +199,33 @@ def move_arm(pub_cmd, loop_rate, dest, vel, accel):
 def move_block(pub_cmd, loop_rate, start_loc, start_height, \
                end_loc, end_height):
     global Q
+    global analog_in_0
 
     start_pos = Q[start_loc][start_height]
     end_pos = Q[end_loc][end_height]
-    vel = 4.0
-    acc = 4.0
+    vel = 2.0
+    acc = 2.0
     error = 0
 
     move_arm(pub_cmd, loop_rate, start_pos, vel, acc)
     gripper(pub_cmd, loop_rate, suction_on)
+    time.sleep(1.0)
+    if (analog_in_0 < 2.0):
+        print("Block missing in expected position!")
+        error = 1
+        gripper(pub_cmd, loop_rate, suction_off)
+        sys.exit()
+
+    
     move_arm(pub_cmd, loop_rate, home, vel, acc)
+
+    
+
     move_arm(pub_cmd, loop_rate, end_pos, vel, acc)
     gripper(pub_cmd, loop_rate, suction_off)
+    move_arm(pub_cmd, loop_rate, home, vel, acc)
     
     return error
-
 
 ############### Your Code End Here ###############
 
@@ -235,7 +248,7 @@ def main():
 
     ############## Your Code Start Here ##############
     # TODO: define a ROS subscriber for ur3/gripper_input message and corresponding callback function
-
+    sub_gripper = rospy.Subscriber('ur3/gripper_input', gripper_input, gripper_callback)
 
     ############### Your Code End Here ###############
 
@@ -246,37 +259,38 @@ def main():
 
     input_done = 0
     tower_start_pos = 0
+    tower_end_pos = 0
 
     while(not input_done):
         input_string = raw_input("Enter the starting position of the tower <Either 1, 2, or 3; or 0 to quit> ")
         print("You entered position " + input_string + "\n")
 
-        tower_start_pos = int(input_string)
-        if (tower_start_pos == 0):
+        if (input_string == "0"):
             print("Quitting... ")
             sys.exit()
-        elif (tower_start_pos <= 3):
+        elif (input_string == "1" or input_string == "2" or input_string == "3"):
+            tower_start_pos = int(input_string)
             input_done = 1
-        else
+        else:
             print("Please just enter the character 1 2 3 or 0 to quit \n\n")
 
-        # input_string = raw_input("Enter number of loops <Either 1 2 3 or 0 to quit> ")
-        # print("You entered " + input_string + "\n")
+    input_done = 0
+    while(not input_done):
+        input_string = raw_input("Enter the ending position of the tower <Either 1, 2, or 3; or 0 to quit> ")
+        print("You entered position " + input_string + "\n")
 
-        # if(int(input_string) == 1):
-        #     input_done = 1
-        #     tower_start_pos = 1
-        # elif (int(input_string) == 2):
-        #     input_done = 1
-        #     tower_start_pos = 2
-        # elif (int(input_string) == 3):
-        #     input_done = 1
-        #     tower_start_pos = 3
-        # elif (int(input_string) == 0):
-        #     print("Quitting... ")
-        #     sys.exit()
-        # else:
-        #     print("Please just enter the character 1 2 3 or 0 to quit \n\n")
+        if (input_string == "0"):
+            print("Quitting... ")
+            sys.exit()
+        elif (input_string == "1" or input_string == "2" or input_string == "3"):
+            tower_end_pos = int(input_string)
+            input_done = 1
+        else:
+            print("Please just enter the character 1 2 3 or 0 to quit \n\n")
+
+    if (tower_start_pos == tower_end_pos):
+        print("Done!")
+        sys.exit()
 
     ############### Your Code End Here ###############
 
@@ -291,14 +305,46 @@ def main():
     ############## Your Code Start Here ##############
     # TODO: modify the code so that UR3 can move tower accordingly from user input
 
+    pos1 = 0
+    pos2 = 1
+    pos3 = 2
+    bot = 0
+    mid = 1
+    top = 2
+
+    move_arm(pub_command, loop_rate, home, 4.0, 4.0)
     if (tower_start_pos == 1):
-        #fo
+        pos1 = 0
+        if (tower_end_pos == 2):
+            pos2 = 1
+            pos3 = 2
+        else:
+            pos2 = 2
+            pos3 = 1
     elif (tower_start_pos == 2):
-        #whatever
+        pos1 = 1
+        if (tower_end_pos == 1):
+            pos2 = 0
+            pos3 = 2
+        else:
+            pos2 = 2
+            pos3 = 0
     elif (tower_start_pos == 3):
-        #wha
-    else
-        print("Invalid tower start position")
+        pos1 = 2
+        if (tower_end_pos == 1):
+            pos2 = 0
+            pos3 = 1
+        else:
+            pos2 = 1
+            pos3 = 0
+    
+    move_block(pub_command, loop_rate, pos1, top, pos2, bot)
+    move_block(pub_command, loop_rate, pos1, mid, pos3, bot)
+    move_block(pub_command, loop_rate, pos2, bot, pos3, mid)
+    move_block(pub_command, loop_rate, pos1, bot, pos2, bot)
+    move_block(pub_command, loop_rate, pos3, mid, pos1, bot)
+    move_block(pub_command, loop_rate, pos3, bot, pos2, mid)
+    move_block(pub_command, loop_rate, pos1, bot, pos2, top)
 
     # while(tower_start_pos > 0):
 
