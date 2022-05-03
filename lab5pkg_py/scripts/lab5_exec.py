@@ -304,24 +304,28 @@ def move_block(pub_cmd, loop_rate, start_xw_yw_zw, target_xw_yw_zw, vel, accel):
 
 	# calc inv kinematics for each position
 	start_thetas = lab_invk(start_xw_yw_zw[0], start_xw_yw_zw[1], start_xw_yw_zw[2], 0)
+	height_thetas = lab_invk(start_xw_yw_zw[0], start_xw_yw_zw[1], 0.120, 0)
 	target_thetas = lab_invk(target_xw_yw_zw[0], target_xw_yw_zw[1], target_xw_yw_zw[2], 0)
+	target_height_thetas = lab_invk(target_xw_yw_zw[0], target_xw_yw_zw[1], 0.120, 0)
 
 	# move arm to start and grip
+	move_arm(pub_cmd, loop_rate, height_thetas, vel, accel)
 	move_arm(pub_cmd, loop_rate, start_thetas, vel, accel)
 	gripper(pub_cmd, loop_rate, True)
-
+	move_arm(pub_cmd, loop_rate, height_thetas, vel, accel)
 	# test if block was picked up/missing
 	time.sleep(1.0)
-	if (analog_in_0 < 2.0):
+	if (digital_in_0 < 1.0):
 		print("Block missing in expected position!")
 		error = 1
 		gripper(pub_cmd, loop_rate, suction_off)
 
 	# move arm to target and let go
-	move_arm(pub_cmd, loop_rate, go_away, vel, accel)
+	#move_arm(pub_cmd, loop_rate, go_away, vel, accel)
+	move_arm(pub_cmd, loop_rate, target_height_thetas, vel, accel)
 	move_arm(pub_cmd, loop_rate, target_thetas, vel, accel)
 	gripper(pub_cmd, loop_rate, False)
-
+	move_arm(pub_cmd, loop_rate, target_height_thetas, vel, accel)
 	move_arm(pub_cmd, loop_rate, go_away, vel, accel)
 
 	
@@ -420,30 +424,30 @@ def main():
 	rot = np.array([[np.cos(theta), -np.sin(theta)],
 					[np.sin(theta), np.cos(theta)]]) 
 
-	green_1_target = [0.195, -0.100, .03]
-	green_2_target = [0.195, -0.155, .03]
-	pink_1_target = [0.260, -0.100, .03]
-	pink_2_target = [0.260, -0.155, .03]
+	green_1_target = [0.135, -0.100, .035]
+	green_2_target = [0.195, -0.155, .035]
+	pink_1_target = [0.260, -0.100, .037]
+	pink_2_target = [0.315, -0.155, .036]
 
 	xw_yw_G_init = xw_yw_G
 	xw_yw_Y_init = xw_yw_Y
-	green1 = [xw_yw_G_init[0][0], xw_yw_G_init[0][1], 0.03]
+	green1 = [xw_yw_G_init[0][0], xw_yw_G_init[0][1], 0.035]
 	# print(green1)
 	move_block(pub_command, loop_rate, green1, green_1_target, vel, accel)
 
-	xw_yw_G_init = xw_yw_G
-	xw_yw_Y_init = xw_yw_Y
-	green2 = [xw_yw_G_init[1][0], xw_yw_G_init[1][1], 0.03]
+	#xw_yw_G_init = xw_yw_G
+	#xw_yw_Y_init = xw_yw_Y
+	green2 = [xw_yw_G_init[1][0], xw_yw_G_init[1][1], 0.035]
 	move_block(pub_command, loop_rate, green2, green_2_target, vel, accel)
 
-	xw_yw_G_init = xw_yw_G
-	xw_yw_Y_init = xw_yw_Y
-	pink1 = [xw_yw_Y_init[0][0], xw_yw_Y_init[0][1], 0.03]
+	#xw_yw_G_init = xw_yw_G
+	#xw_yw_Y_init = xw_yw_Y
+	pink1 = [xw_yw_Y_init[0][0], xw_yw_Y_init[0][1], 0.036]
 	move_block(pub_command, loop_rate, pink1, pink_1_target, vel, accel)
 
-	xw_yw_G_init = xw_yw_G
-	xw_yw_Y_init = xw_yw_Y
-	pink2 = [xw_yw_Y_init[1][0], xw_yw_Y_init[1][1], 0.03]
+	#xw_yw_G_init = xw_yw_G
+	#xw_yw_Y_init = xw_yw_Y
+	pink2 = [xw_yw_Y_init[1][0], xw_yw_Y_init[1][1], 0.036]
 	move_block(pub_command, loop_rate, pink2, pink_2_target, vel, accel)
 
 

@@ -26,15 +26,15 @@ def IMG2W(col, row):
     x_c = row_center * B
     y_c = col_center * B
 
-    T_x = 0.225
-    T_y = 0.110
+    T_x = 0.232
+    T_y = 0.100
 
     x_w = x_c + T_x
     y_w = y_c + T_y
 
     # print("xw, yw: ", x_w, y_w)
     
-    theta = np.radians(-2.26)  # degrees rotation from camera axis to world axis
+    theta = np.radians(-1.30)  # degrees rotation from camera axis to world axis
 
     vec = np.array([x_w, y_w])
     rot = np.array([[np.cos(theta), np.sin(theta)],
@@ -132,7 +132,6 @@ def blob_search(image_raw, color):
         # Convert image coordinates to global world coordinate using IM2W() function
         for i in range(num_blobs):
             xw_yw.append(IMG2W(blob_image_center[i][0], blob_image_center[i][1]))
-
 
     cv2.namedWindow("Camera View")
     cv2.imshow("Camera View", image_raw)
